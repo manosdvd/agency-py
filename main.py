@@ -2,6 +2,7 @@ import flet as ft
 from my_control import Control
 import schemas
 import case_builder
+import validator
 
 def main(page: ft.Page):
     page.title = "The Agency"
@@ -20,7 +21,7 @@ def main(page: ft.Page):
         elif selected_index == 1:
             main_content.controls.append(case_builder.build_case_builder_view(app_control))
         elif selected_index == 2:
-            main_content.controls.append(ft.Text("Validator View - Coming Soon!"))
+            main_content.controls.append(validator.build_validator_view(app_control))
         
         page.update()
 

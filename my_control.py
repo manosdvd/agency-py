@@ -119,6 +119,54 @@ class Control:
         # This will be handled in the next step.
         self.page.update()
 
+    def update_clue(self, clue: schemas.Clue, attribute_name: str, new_value: Any):
+        """
+        Updates an attribute of a clue.
+        """
+        setattr(clue, attribute_name, new_value)
+        self.page.update()
+
+    def create_new_clue(self):
+        """
+        Creates a new, empty clue.
+        """
+        import uuid
+        new_clue = schemas.Clue(
+            clueId=f"clue-{uuid.uuid4()}",
+            criticalClue=False,
+            redHerring=False,
+            isLie=False,
+            source="",
+            clueSummary="",
+            knowledgeLevel="Sleuth Only",
+        )
+        self.case_data.clues.append(new_clue)
+        self.select_asset(new_clue)
+        self.page.update()
+
+    def add_interview_question(self, suspect: schemas.CaseSuspect):
+        """
+        Adds a new, empty interview question to a suspect.
+        """
+        import uuid
+        new_question = schemas.InterviewQuestion(
+            questionId=f"q-{uuid.uuid4()}",
+            question="",
+            answerId=f"a-{uuid.uuid4()}",
+            answer="",
+            isLie=False,
+            isClue=False,
+        )
+        suspect.interview.append(new_question)
+        self.page.update()
+
+    def update_interview_question(self, question: schemas.InterviewQuestion, attribute_name: str, new_value: Any):
+        """
+        Updates an attribute of an interview question.
+        """
+        setattr(question, attribute_name, new_value)
+        self.page.update()
+
     def update_case_meta(self, attribute_name: str, new_value: Any):
         """
         Updates an attribute of the caseMeta.
