@@ -240,6 +240,14 @@ class Clue:
     associatedCharacter: Optional[str] = None
 
 @dataclass
+class ValidationResult:
+    message: str
+    type: Literal["error", "warning"]
+    asset_id: Optional[str] = None
+    asset_type: Optional[str] = None
+    field_name: Optional[str] = None
+
+@dataclass
 class CaseData:
     """The root object for a specific mystery case."""
     caseMeta: Optional[CaseMeta] = None

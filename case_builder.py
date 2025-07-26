@@ -1,298 +1,180 @@
 import flet as ft
 from my_control import Control
 import schemas
+import plot_graph
+import timeline_editor
 
-def build_case_builder_view(control: Control):
+def build_case_builder_view(control: Control, asset_to_select_id: Optional[str] = None):
     """
     Builds the UI for the Case Builder view.
     """
-    
-    victim_dropdown = ft.Dropdown(
+
+    case_meta_tab = ft.Column(
+        [
+            ft.Text("Define the Crime", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+                victim_dropdown = ft.Dropdown(
         label="Victim",
         options=[ft.dropdown.Option(char.id, char.fullName) for char in control.world_data.characters],
         value=control.case_data.caseMeta.victim if control.case_data.caseMeta else None,
-        on_change=lambda e: control.update_case_meta('victim', e.control.value)
+        on_change=lambda e: control.update_case_meta('victim', e.control.value),
+        tooltip="The character who is the victim of the crime."
     )
-
-    culprit_dropdown = ft.Dropdown(
+            culprit_dropdown = ft.Dropdown(
         label="Culprit",
         options=[ft.dropdown.Option(char.id, char.fullName) for char in control.world_data.characters],
         value=control.case_data.caseMeta.culprit if control.case_data.caseMeta else None,
-        on_change=lambda e: control.update_case_meta('culprit', e.control.value)
+        on_change=lambda e: control.update_case_meta('culprit', e.control.value),
+        tooltip="The character who committed the crime."
     )
-
-    crime_scene_dropdown = ft.Dropdown(
+            crime_scene_dropdown = ft.Dropdown(
         label="Crime Scene",
         options=[ft.dropdown.Option(loc.id, loc.name) for loc in control.world_data.locations],
         value=control.case_data.caseMeta.crimeScene if control.case_data.caseMeta else None,
-        on_change=lambda e: control.update_case_meta('crimeScene', e.control.value)
+        on_change=lambda e: control.update_case_meta('crimeScene', e.control.value),
+        tooltip="The primary location where the crime took place."
     )
 
-    murder_weapon_dropdown = ft.Dropdown(
+            murder_weapon_dropdown = ft.Dropdown(
         label="Murder Weapon",
         options=[ft.dropdown.Option(item.id, item.name) for item in control.world_data.items],
         value=control.case_data.caseMeta.murderWeapon if control.case_data.caseMeta else None,
-        on_change=lambda e: control.update_case_meta('murderWeapon', e.control.value)
+        on_change=lambda e: control.update_case_meta('murderWeapon', e.control.value),
+        tooltip="The item used to commit the crime."
     )
 
-    core_mystery_details = ft.TextField(
+            core_mystery_details = ft.TextField(
         label="Core Mystery Solution Details",
         multiline=True,
         min_lines=3,
         value=control.case_data.caseMeta.coreMysterySolutionDetails if control.case_data.caseMeta else "",
-        on_change=lambda e: control.update_case_meta('coreMysterySolutionDetails', e.control.value)
+        on_change=lambda e: control.update_case_meta('coreMysterySolutionDetails', e.control.value),
+        tooltip="Detailed explanation of how the mystery is solved."
+    )
+            ft.Checkbox(label="Murder Weapon Hidden", value=control.case_data.caseMeta.murderWeaponHidden if control.case_data.caseMeta else False, on_change=lambda e: control.update_case_meta('murderWeaponHidden', e.control.value), tooltip="Is the murder weapon hidden or not immediately obvious?"),
+            ft.Dropdown(
+                label="Means Clue",
+                options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
+                value=control.case_data.caseMeta.meansClue if control.case_data.caseMeta else None,
+                on_change=lambda e: control.update_case_meta('meansClue', e.control.value), tooltip="The clue that reveals the means by which the crime was committed."
+            ),
+            ft.Dropdown(
+                label="Motive Clue",
+                options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
+                value=control.case_data.caseMeta.motiveClue if control.case_data.caseMeta else None,
+                on_change=lambda e: control.update_case_meta('motiveClue', e.control.value), tooltip="The clue that reveals the motive for the crime."
+            ),
+            ft.Dropdown(
+                label="Opportunity Clue",
+                options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
+                value=control.case_data.caseMeta.opportunityClue if control.case_data.caseMeta else None,
+                on_change=lambda e: control.update_case_meta('opportunityClue', e.control.value), tooltip="The clue that reveals the opportunity the culprit had."
+            ),
+            ft.TextField(label="Red Herring Clues (comma-separated)", value=", ".join(control.case_data.caseMeta.redHerringClues) if control.case_data.caseMeta else "", on_change=lambda e: control.update_case_meta('redHerringClues', [s.strip() for s in e.control.value.split(',')]), tooltip="Comma-separated list of clue IDs that are red herrings."),
+            ft.Dropdown(
+                label="Narrative Viewpoint",
+                options=[ft.dropdown.Option(v) for v in schemas.CaseMeta.__annotations__['narrativeViewpoint'].__args__],
+                value=control.case_data.caseMeta.narrativeViewpoint if control.case_data.caseMeta else None,
+                on_change=lambda e: control.update_case_meta('narrativeViewpoint', e.control.value), tooltip="The narrative perspective of the story."
+            ),
+            ft.Dropdown(
+                label="Narrative Tense",
+                options=[ft.dropdown.Option(t) for t in schemas.CaseMeta.__annotations__['narrativeTense'].__args__],
+                value=control.case_data.caseMeta.narrativeTense if control.case_data.caseMeta else None,
+                on_change=lambda e: control.update_case_meta('narrativeTense', e.control.value), tooltip="The grammatical tense of the narrative."
+            ),
+            core_mystery_details,
+            ft.Row([
+                ft.TextField(label="Opening Monologue", multiline=True, min_lines=3, value=control.case_data.caseMeta.openingMonologue if control.case_data.caseMeta else "", on_change=lambda e: control.update_case_meta('openingMonologue', e.control.value), expand=True, tooltip="The opening monologue of the story."),
+                ft.IconButton(icon=ft.icons.STARS, on_click=lambda e: control.generate_with_ai(control.case_data.caseMeta, 'openingMonologue')),
+            ]),
+            ft.Row([
+                ft.TextField(label="Ultimate Reveal Scene Description", multiline=True, min_lines=3, value=control.case_data.caseMeta.ultimateRevealSceneDescription if control.case_data.caseMeta else "", on_change=lambda e: control.update_case_meta('ultimateRevealSceneDescription', e.control.value), expand=True, tooltip="Description of the scene where the mystery is finally revealed."),
+                ft.IconButton(icon=ft.icons.STARS, on_click=lambda e: control.generate_with_ai(control.case_data.caseMeta, 'ultimateRevealSceneDescription')),
+            ]),
+            ft.Row([
+                ft.TextField(label="Successful Denouement", multiline=True, min_lines=3, value=control.case_data.caseMeta.successfulDenouement if control.case_data.caseMeta else "", on_change=lambda e: control.update_case_meta('successfulDenouement', e.control.value), expand=True, tooltip="Description of the successful resolution of the story."),
+                ft.IconButton(icon=ft.icons.STARS, on_click=lambda e: control.generate_with_ai(control.case_data.caseMeta, 'successfulDenouement')),
+            ]),
+            ft.Row([
+                ft.TextField(label="Failed Denouement", multiline=True, min_lines=3, value=control.case_data.caseMeta.failedDenouement if control.case_data.caseMeta else "", on_change=lambda e: control.update_case_meta('failedDenouement', e.control.value), expand=True, tooltip="Description of a potential failed resolution of the story."),
+                ft.IconButton(icon=ft.icons.STARS, on_click=lambda e: control.generate_with_ai(control.case_data.caseMeta, 'failedDenouement')),
+            ]),
+        ]
     )
 
+    suspects_tab = ft.Column(
+        [
+            ft.Text("Manage Suspects", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            suspects_section,
+        ]
+    )
 
-    suspects_section = ft.Column()
+    clues_tab = ft.Column(
+        [
+            ft.Text("Manage Clues", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            clues_section,
+        ]
+    )
 
-    def update_suspects_view():
-        suspects_section.controls.clear()
-        
-        selected_suspect_id = None
-        if control.selected_asset and isinstance(control.selected_asset, schemas.CaseSuspect):
-            selected_suspect_id = control.selected_asset.characterId
-
-        def on_suspect_select(e):
-            for suspect in control.case_data.keySuspects:
-                if suspect.characterId == e.control.value:
-                    control.select_asset(suspect)
-                    update_suspects_view()
-                    return
-            # If suspect not found, create a new one
-            new_suspect = schemas.CaseSuspect(characterId=e.control.value, interview=[])
-            control.case_data.keySuspects.append(new_suspect)
-            control.select_asset(new_suspect)
-            update_suspects_view()
-
-
-        suspect_dropdown = ft.Dropdown(
-            label="Select Suspect",
-            options=[ft.dropdown.Option(char.id, char.fullName) for char in control.world_data.characters],
-            value=selected_suspect_id,
-            on_change=on_suspect_select
-        )
-        suspects_section.controls.append(suspect_dropdown)
-
-        if control.selected_asset and isinstance(control.selected_asset, schemas.CaseSuspect):
-            suspect = control.selected_asset
-            suspects_section.controls.append(ft.Text(f"Editing Suspect: {suspect.characterId}"))
-            
-            interview_column = ft.Column()
-            for i, interview_q in enumerate(suspect.interview):
-                
-                debunking_clue_dropdown = ft.Dropdown(
-                    label="Debunking Clue",
-                    options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
-                    value=interview_q.debunkingClue,
-                    on_change=lambda e, q=interview_q: control.update_interview_question(q, 'debunkingClue', e.control.value),
-                    disabled=not interview_q.isLie
-                )
-
-                is_lie_checkbox = ft.Checkbox(
-                    label="Is Lie?", 
-                    value=interview_q.isLie, 
-                    on_change=lambda e, q=interview_q, d=debunking_clue_dropdown: (
-                        control.update_interview_question(q, 'isLie', e.control.value),
-                        setattr(d, 'disabled', not e.control.value),
-                        control.page.update()
-                    )
-                )
-
-                interview_column.controls.append(
-                    ft.Column([
-                        ft.TextField(label=f"Question {i+1}", value=interview_q.question, on_change=lambda e, q=interview_q: control.update_interview_question(q, 'question', e.control.value)),
-                        ft.TextField(label=f"Answer {i+1}", value=interview_q.answer, on_change=lambda e, q=interview_q: control.update_interview_question(q, 'answer', e.control.value)),
-                        is_lie_checkbox,
-                        debunking_clue_dropdown,
-                        ft.Checkbox(label="Is Clue?", value=interview_q.isClue, on_change=lambda e, q=interview_q: control.toggle_interview_question_is_clue(q, e.control.value)),
-                        ft.Divider(),
-                    ])
-                )
-            
-            suspects_section.controls.append(interview_column)
-            suspects_section.controls.append(ft.ElevatedButton(text="Add Interview Question", on_click=lambda e: control.add_interview_question(suspect)))
-    
-    update_suspects_view()
-
-
-    clues_section = ft.Column()
-
-    def open_unlocks_dialog(clue: schemas.Clue):
-        
-        unlock_type = ft.Dropdown(
-            label="Unlock Type",
-            options=[
-                ft.dropdown.Option("location", "Location"),
-                ft.dropdown.Option("interview_question", "Interview Question"),
-            ],
-            on_change=lambda e: update_unlock_options(e.control.value)
-        )
-        unlock_target = ft.Dropdown(label="Target")
-        
-        def update_unlock_options(type: str):
-            unlock_target.options.clear()
-            if type == "location":
-                unlock_target.options.extend([ft.dropdown.Option(loc.id, loc.name) for loc in control.world_data.locations])
-            elif type == "interview_question":
-                for suspect in control.case_data.keySuspects:
-                    for iq in suspect.interview:
-                        unlock_target.options.append(ft.dropdown.Option(iq.questionId, f"{suspect.characterId}: {iq.question}"))
-            unlock_target.update()
-
-        def add_unlock(e):
-            clue.revealsUnlocks.append({"type": unlock_type.value, "id": unlock_target.value})
-            dialog.open = False
-            control.page.update()
-
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("Add Unlock"),
-            content=ft.Column([
-                unlock_type,
-                unlock_target,
-            ]),
-            actions=[
-                ft.TextButton("Add", on_click=add_unlock),
-                ft.TextButton("Cancel", on_click=lambda e: setattr(dialog, 'open', False) or control.page.update()),
-            ]
-        )
-        control.page.dialog = dialog
-        dialog.open = True
-        control.page.update()
-
-    def update_clues_view():
-        clues_section.controls.clear()
-
-        def on_clue_click(e):
-            clue_id = e.control.data
-            for c in control.case_data.clues:
-                if c.clueId == clue_id:
-                    control.select_asset(c)
-                    update_clues_view()
-                    break
-
-        clue_list = ft.ListView(expand=1, spacing=5, padding=10)
-        for clue in control.case_data.clues:
-            clue_list.controls.append(
-                ft.ListTile(
-                    title=ft.Text(f"{clue.clueId}: {clue.clueSummary}"),
-                    data=clue.clueId,
-                    on_click=on_clue_click
-                )
-            )
-        
-        clues_section.controls.append(clue_list)
-        clues_section.controls.append(ft.ElevatedButton(text="New Clue", on_click=lambda e: control.create_new_clue() and update_clues_view()))
-
-        if control.selected_asset and isinstance(control.selected_asset, schemas.Clue):
-            clue = control.selected_asset
-            clue_form = ft.Column([
-                ft.TextField(label="Clue ID", value=clue.clueId, on_change=lambda e: control.update_clue(clue, 'clueId', e.control.value)),
-                ft.TextField(label="Summary", value=clue.clueSummary, on_change=lambda e: control.update_clue(clue, 'clueSummary', e.control.value)),
-                ft.Checkbox(label="Critical Clue", value=clue.criticalClue, on_change=lambda e: control.update_clue(clue, 'criticalClue', e.control.value)),
-                ft.Checkbox(label="Red Herring", value=clue.redHerring, on_change=lambda e: control.update_clue(clue, 'redHerring', e.control.value)),
-                ft.Checkbox(label="Is Lie", value=clue.isLie, on_change=lambda e: control.update_clue(clue, 'isLie', e.control.value)),
-                ft.TextField(label="Source", value=clue.source, on_change=lambda e: control.update_clue(clue, 'source', e.control.value)),
-                ft.Dropdown(
-                    label="Knowledge Level",
-                    options=[ft.dropdown.Option(k) for k in ["Sleuth Only", "Reader Only", "Both", "Neither (Off-Page)"]],
-                    value=clue.knowledgeLevel,
-                    on_change=lambda e: control.update_clue(clue, 'knowledgeLevel', e.control.value)
-                ),
-                ft.TextField(label="Discovery Path", value=", ".join(clue.discoveryPath), on_change=lambda e: control.update_clue(clue, 'discoveryPath', [s.strip() for s in e.control.value.split(',')])),
-                ft.TextField(label="Presentation Method", value=", ".join(clue.presentationMethod), on_change=lambda e: control.update_clue(clue, 'presentationMethod', [s.strip() for s in e.control.value.split(',')])),
-                ft.TextField(label="Character Implicated", value=clue.characterImplicated, on_change=lambda e: control.update_clue(clue, 'characterImplicated', e.control.value)),
-                ft.Dropdown(
-                    label="Red Herring Type",
-                    options=[ft.dropdown.Option(r) for r in ["Decoy Suspect", "Misleading Object", "False Alibi", "Misleading Dialogue"]],
-                    value=clue.redHerringType,
-                    on_change=lambda e: control.update_clue(clue, 'redHerringType', e.control.value)
-                ),
-                ft.TextField(label="Mechanism of Misdirection", value=clue.mechanismOfMisdirection, on_change=lambda e: control.update_clue(clue, 'mechanismOfMisdirection', e.control.value)),
-                ft.TextField(label="Debunking Clue", value=clue.debunkingClue, on_change=lambda e: control.update_clue(clue, 'debunkingClue', e.control.value)),
-                ft.Dropdown(
-                    label="Dependencies",
-                    options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
-                    value=clue.dependencies,
-                    multi_select=True,
-                    on_change=lambda e: control.update_clue(clue, 'dependencies', e.control.value)
-                ),
-                ft.TextField(label="Required Actions for Discovery", value=", ".join(clue.requiredActionsForDiscovery), on_change=lambda e: control.update_clue(clue, 'requiredActionsForDiscovery', [s.strip() for s in e.control.value.split(',')])),
-                ft.TextField(label="Associated Item", value=clue.associatedItem, on_change=lambda e: control.update_clue(clue, 'associatedItem', e.control.value)),
-                ft.TextField(label="Associated Location", value=clue.associatedLocation, on_change=lambda e: control.update_clue(clue, 'associatedLocation', e.control.value)),
-                ft.TextField(label="Associated Character", value=clue.associatedCharacter, on_change=lambda e: control.update_clue(clue, 'associatedCharacter', e.control.value)),
-                ft.ElevatedButton(text="Manage Unlocks", on_click=lambda e: open_unlocks_dialog(clue)),
-            ])
-            clues_section.controls.append(clue_form)
-
-    update_clues_view()
-
-    case_locations_section = ft.Column()
-
-    def update_case_locations_view():
-        case_locations_section.controls.clear()
-
-        def on_location_select(e):
-            # Find or create the CaseLocation
-            case_loc = next((cl for cl in control.case_data.caseLocations if cl.locationId == e.control.value), None)
-            if not case_loc:
-                case_loc = schemas.CaseLocation(locationId=e.control.value, locationClues=[], witnesses=[])
-                control.case_data.caseLocations.append(case_loc)
-            control.select_asset(case_loc)
-            update_case_locations_view()
-
-        location_dropdown = ft.Dropdown(
-            label="Select Location",
-            options=[ft.dropdown.Option(loc.id, loc.name) for loc in control.world_data.locations],
-            value=control.selected_asset.locationId if isinstance(control.selected_asset, schemas.CaseLocation) else None,
-            on_change=on_location_select
-        )
-        case_locations_section.controls.append(location_dropdown)
-
-        if isinstance(control.selected_asset, schemas.CaseLocation):
-            case_loc = control.selected_asset
-            
-            clues_checklist = ft.Column([ft.Text("Clues at this Location", style=ft.TextThemeStyle.HEADLINE_SMALL)])
-            for clue in control.case_data.clues:
-                def on_clue_check_change(e, c=clue, cloc=case_loc):
-                    if e.control.value:
-                        cloc.locationClues.append(c.clueId)
-                    else:
-                        cloc.locationClues.remove(c.clueId)
-                clues_checklist.controls.append(ft.Checkbox(label=clue.clueSummary, value=clue.clueId in case_loc.locationClues, on_change=on_clue_check_change))
-            
-            witnesses_checklist = ft.Column([ft.Text("Witnesses at this Location", style=ft.TextThemeStyle.HEADLINE_SMALL)])
-            non_suspects = [char for char in control.world_data.characters if char.id not in [s.characterId for s in control.case_data.keySuspects]]
-            for witness in non_suspects:
-                def on_witness_check_change(e, w=witness, cloc=case_loc):
-                    if e.control.value:
-                        cloc.witnesses.append(schemas.CaseWitness(characterId=w.id, interview=[]))
-                    else:
-                        cloc.witnesses = [wit for wit in cloc.witnesses if wit.characterId != w.id]
-                witnesses_checklist.controls.append(ft.Checkbox(label=witness.fullName, value=any(w.characterId == witness.id for w in case_loc.witnesses), on_change=on_witness_check_change))
-
-            case_locations_section.controls.extend([clues_checklist, witnesses_checklist])
+    case_locations_tab = ft.Column(
+        [
+            ft.Text("Manage Case Locations", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            case_locations_section,
+        ]
+    )
 
     update_case_locations_view()
 
-    return ft.Column(
-        [
-            ft.Text("Define the Crime", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-            victim_dropdown,
-            culprit_dropdown,
-            crime_scene_dropdown,
-            murder_weapon_dropdown,
-            core_mystery_details,
-            ft.Divider(),
-            ft.Text("Manage Suspects", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-            suspects_section,
-            ft.Divider(),
-            ft.Text("Manage Case Locations", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-            case_locations_section,
-            ft.Divider(),
-            ft.Text("Manage Clues", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-            clues_section,
-            ft.ElevatedButton(text="Save Case", on_click=lambda e: control.save_data())
-        ]
+    if asset_to_select_id:
+        # Try to select the asset if an ID is provided
+        selected_asset_obj = None
+        # Check in suspects
+        for suspect in control.case_data.keySuspects:
+            if suspect.characterId == asset_to_select_id:
+                selected_asset_obj = suspect
+                break
+            for iq in suspect.interview:
+                if iq.questionId == asset_to_select_id:
+                    selected_asset_obj = iq
+                    break
+            if selected_asset_obj: break
+        
+        # Check in clues
+        if not selected_asset_obj:
+            for clue in control.case_data.clues:
+                if clue.clueId == asset_to_select_id:
+                    selected_asset_obj = clue
+                    break
+        
+        # Check in case locations
+        if not selected_asset_obj:
+            for case_loc in control.case_data.caseLocations:
+                if case_loc.locationId == asset_to_select_id:
+                    selected_asset_obj = case_loc
+                    break
+                for witness in case_loc.witnesses:
+                    if witness.characterId == asset_to_select_id:
+                        selected_asset_obj = witness
+                        break
+                if selected_asset_obj: break
+
+        if selected_asset_obj:
+            control.select_asset(selected_asset_obj)
+        elif control.case_data.caseMeta and asset_to_select_id == "caseMeta":
+            control.select_asset(control.case_data.caseMeta)
+
+    return_tabs = ft.Tabs(
+        selected_index=0,
+        animation_duration=300,
+        tabs=[
+            ft.Tab(text="Case Meta", content=case_meta_tab),
+            ft.Tab(text="Suspects", content=suspects_tab),
+            ft.Tab(text="Clues", content=clues_tab),
+            ft.Tab(text="Case Locations", content=case_locations_tab),
+            ft.Tab(text="Plot Graph", content=plot_graph.build_plot_graph_view(control)),
+            ft.Tab(text="Timeline Editor", content=timeline_editor.build_timeline_editor_view(control)),
+        ],
+        expand=1,
     )
+    control.case_builder_tabs = return_tabs
+    return return_tabs
