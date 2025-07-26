@@ -171,7 +171,85 @@ def main(page: ft.Page):
                         ),
                         ft.Checkbox(label="Hidden", value=loc.hidden, on_change=lambda e: control.update_selected_asset('hidden', e.control.value)),
                         ft.TextField(label="Internal Logic Notes", value=loc.internalLogicNotes, multiline=True, min_lines=2, on_change=lambda e: control.update_selected_asset('internalLogicNotes', e.control.value)),
-                        elif isinstance(control.selected_asset, schemas.Sleuth):
+                        ft.TextField(label="Clues", value=", ".join(loc.clues), on_change=lambda e: control.update_selected_asset('clues', [s.strip() for s in e.control.value.split(',')])),
+                    ])
+                elif isinstance(control.selected_asset, schemas.Item):
+                    item = control.selected_asset
+                    form_view.controls.extend([
+                        ft.TextField(label="ID", value=item.id, on_change=lambda e: control.update_selected_asset('id', e.control.value)),
+                        ft.TextField(label="Name", value=item.name, on_change=lambda e: control.update_selected_asset('name', e.control.value)),
+                        ft.TextField(label="Description", value=item.description, multiline=True, min_lines=3, on_change=lambda e: control.update_selected_asset('description', e.control.value)),
+                        ft.Checkbox(label="Possible Means", value=item.possibleMeans, on_change=lambda e: control.update_selected_asset('possibleMeans', e.control.value)),
+                        ft.Checkbox(label="Possible Motive", value=item.possibleMotive, on_change=lambda e: control.update_selected_asset('possibleMotive', e.control.value)),
+                        ft.Checkbox(label="Possible Opportunity", value=item.possibleOpportunity, on_change=lambda e: control.update_selected_asset('possibleOpportunity', e.control.value)),
+                        ft.Dropdown(
+                            label="Clue Potential",
+                            options=[ft.dropdown.Option(c) for c in ["None", "Low", "Medium", "High", "Critical"]],
+                            value=item.cluePotential,
+                            on_change=lambda e: control.update_selected_asset('cluePotential', e.control.value)
+                        ),
+                        ft.TextField(label="Value", value=item.value, on_change=lambda e: control.update_selected_asset('value', e.control.value)),
+                        ft.Dropdown(
+                            label="Condition",
+                            options=[ft.dropdown.Option(c) for c in ["New", "Good", "Used", "Worn", "Damaged", "Broken"]],
+                            value=item.condition,
+                            on_change=lambda e: control.update_selected_asset('condition', e.control.value)
+                        ),
+                        ft.TextField(label="Image", value=item.image, on_change=lambda e: control.update_selected_asset('image', e.control.value)),
+                        ft.TextField(label="Type", value=item.type, on_change=lambda e: control.update_selected_asset('type', e.control.value)),
+                        ft.TextField(label="Default Location", value=item.defaultLocation, on_change=lambda e: control.update_selected_asset('defaultLocation', e.control.value)),
+                        ft.TextField(label="Default Owner", value=item.defaultOwner, on_change=lambda e: control.update_selected_asset('defaultOwner', e.control.value)),
+                        ft.TextField(label="Use", value=", ".join(item.use), on_change=lambda e: control.update_selected_asset('use', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Unique Properties", value=", ".join(item.uniqueProperties), on_change=lambda e: control.update_selected_asset('uniqueProperties', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Significance", value=item.significance, multiline=True, min_lines=2, on_change=lambda e: control.update_selected_asset('significance', e.control.value)),
+                    ])
+                elif isinstance(control.selected_asset, schemas.Faction):
+                    faction = control.selected_asset
+                    form_view.controls.extend([
+                        ft.TextField(label="ID", value=faction.id, on_change=lambda e: control.update_selected_asset('id', e.control.value)),
+                        ft.TextField(label="Name", value=faction.name, on_change=lambda e: control.update_selected_asset('name', e.control.value)),
+                        ft.TextField(label="Description", value=faction.description, multiline=True, min_lines=3, on_change=lambda e: control.update_selected_asset('description', e.control.value)),
+                        ft.TextField(label="Archetype", value=faction.archetype, on_change=lambda e: control.update_selected_asset('archetype', e.control.value)),
+                        ft.TextField(label="Ideology", value=faction.ideology, on_change=lambda e: control.update_selected_asset('ideology', e.control.value)),
+                        ft.TextField(label="Headquarters", value=faction.headquarters, on_change=lambda e: control.update_selected_asset('headquarters', e.control.value)),
+                        ft.TextField(label="Resources", value=", ".join(faction.resources), on_change=lambda e: control.update_selected_asset('resources', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Image", value=faction.image, on_change=lambda e: control.update_selected_asset('image', e.control.value)),
+                        ft.TextField(label="Ally Factions", value=", ".join(faction.allyFactions), on_change=lambda e: control.update_selected_asset('allyFactions', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Enemy Factions", value=", ".join(faction.enemyFactions), on_change=lambda e: control.update_selected_asset('enemyFactions', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Members", value=", ".join(faction.members), on_change=lambda e: control.update_selected_asset('members', [s.strip() for s in e.control.value.split(',')])),
+                        ft.Dropdown(
+                            label="Influence",
+                            options=[ft.dropdown.Option(i) for i in ["Local", "District-wide", "City-wide", "Regional", "Global"]],
+                            value=faction.influence,
+                            on_change=lambda e: control.update_selected_asset('influence', e.control.value)
+                        ),
+                        ft.TextField(label="Public Perception", value=faction.publicPerception, on_change=lambda e: control.update_selected_asset('publicPerception', e.control.value)),
+                    ])
+                elif isinstance(control.selected_asset, schemas.District):
+                    district = control.selected_asset
+                    form_view.controls.extend([
+                        ft.TextField(label="ID", value=district.id, on_change=lambda e: control.update_selected_asset('id', e.control.value)),
+                        ft.TextField(label="Name", value=district.name, on_change=lambda e: control.update_selected_asset('name', e.control.value)),
+                        ft.TextField(label="Description", value=district.description, multiline=True, min_lines=3, on_change=lambda e: control.update_selected_asset('description', e.control.value)),
+                        ft.TextField(label="Image", value=district.image, on_change=lambda e: control.update_selected_asset('image', e.control.value)),
+                        ft.Dropdown(
+                            label="Wealth Class",
+                            options=[ft.dropdown.Option(w) for w in schemas.WealthClass.__args__],
+                            value=district.wealthClass,
+                            on_change=lambda e: control.update_selected_asset('wealthClass', e.control.value)
+                        ),
+                        ft.TextField(label="Atmosphere", value=district.atmosphere, on_change=lambda e: control.update_selected_asset('atmosphere', e.control.value)),
+                        ft.Dropdown(
+                            label="Population Density",
+                            options=[ft.dropdown.Option(p) for p in ["Sparse", "Moderate", "Dense", "Crowded"]],
+                            value=district.populationDensity,
+                            on_change=lambda e: control.update_selected_asset('populationDensity', e.control.value)
+                        ),
+                        ft.TextField(label="Notable Features", value=", ".join(district.notableFeatures), on_change=lambda e: control.update_selected_asset('notableFeatures', [s.strip() for s in e.control.value.split(',')])),
+                        ft.TextField(label="Dominant Faction", value=district.dominantFaction, on_change=lambda e: control.update_selected_asset('dominantFaction', e.control.value)),
+                        ft.TextField(label="Key Locations", value=", ".join(district.keyLocations), on_change=lambda e: control.update_selected_asset('keyLocations', [s.strip() for s in e.control.value.split(',')])),
+                    ])
+                elif isinstance(control.selected_asset, schemas.Sleuth):
                     sleuth = control.selected_asset
                     form_view.controls.extend([
                         ft.TextField(label="ID", value=sleuth.id, on_change=lambda e: control.update_selected_asset('id', e.control.value)),
