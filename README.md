@@ -44,10 +44,8 @@ To get started with The Agency, follow these steps:
     ```
 4.  **Run the application:**
     ```bash
-    python main.py
+    python3 main.py
     ```
-
-*(Note: A `requirements.txt` file has not been created yet.)*
 
 ## Project Structure
 
@@ -55,11 +53,24 @@ To get started with The Agency, follow these steps:
 agency-py/
 ├── .gitignore
 ├── blueprint.md        # Project vision and design documentation
-├── data_manager.py     # Handles loading and saving of data
-├── main.py             # Main application entry point
-├── my_control.py       # Contains the core application logic
+├── case_builder.py     # UI components for the Case Builder view
+├── data_manager.py     # Handles loading and saving of case/world data
+├── main.py             # Main application entry point (Flet UI)
+├── my_control.py       # Contains the core application logic and state
+├── README.md           # This file
+├── requirements.txt    # Project dependencies
 ├── schemas.py          # Defines the data structures for the application
-└── cases/              # Contains sample case data
+├── validator.py        # UI components for the Validator view
+└── cases/              # Contains all case data
+    └── the_crimson_stain/
+        ├── case_data.json
+        └── world_data/
+            ├── characters.json
+            ├── districts.json
+            ├── factions.json
+            ├── items.json
+            ├── locations.json
+            └── sleuth.json
 ```
 
 ## Contributing
