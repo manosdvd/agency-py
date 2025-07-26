@@ -80,11 +80,32 @@ def build_case_builder_view(control: Control):
             
             interview_column = ft.Column()
             for i, interview_q in enumerate(suspect.interview):
+                
+                debunking_clue_dropdown = ft.Dropdown(
+                    label="Debunking Clue",
+                    options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
+                    value=interview_q.debunkingClue,
+                    on_change=lambda e, q=interview_q: control.update_interview_question(q, 'debunkingClue', e.control.value),
+                    disabled=not interview_q.isLie
+                )
+
+                is_lie_checkbox = ft.Checkbox(
+                    label="Is Lie?", 
+                    value=interview_q.isLie, 
+                    on_change=lambda e, q=interview_q, d=debunking_clue_dropdown: (
+                        control.update_interview_question(q, 'isLie', e.control.value),
+                        setattr(d, 'disabled', not e.control.value),
+                        control.page.update()
+                    )
+                )
+
                 interview_column.controls.append(
                     ft.Column([
                         ft.TextField(label=f"Question {i+1}", value=interview_q.question, on_change=lambda e, q=interview_q: control.update_interview_question(q, 'question', e.control.value)),
                         ft.TextField(label=f"Answer {i+1}", value=interview_q.answer, on_change=lambda e, q=interview_q: control.update_interview_question(q, 'answer', e.control.value)),
-                        ft.Checkbox(label="Is Lie?", value=interview_q.isLie, on_change=lambda e, q=interview_q: control.update_interview_question(q, 'isLie', e.control.value)),
+                        is_lie_checkbox,
+                        debunking_clue_dropdown,
+                        ft.Checkbox(label="Is Clue?", value=interview_q.isClue, on_change=lambda e, q=interview_q: control.toggle_interview_question_is_clue(q, e.control.value)),
                         ft.Divider(),
                     ])
                 )
@@ -96,6 +117,49 @@ def build_case_builder_view(control: Control):
 
 
     clues_section = ft.Column()
+
+    def open_unlocks_dialog(clue: schemas.Clue):
+        
+        unlock_type = ft.Dropdown(
+            label="Unlock Type",
+            options=[
+                ft.dropdown.Option("location", "Location"),
+                ft.dropdown.Option("interview_question", "Interview Question"),
+            ],
+            on_change=lambda e: update_unlock_options(e.control.value)
+        )
+        unlock_target = ft.Dropdown(label="Target")
+        
+        def update_unlock_options(type: str):
+            unlock_target.options.clear()
+            if type == "location":
+                unlock_target.options.extend([ft.dropdown.Option(loc.id, loc.name) for loc in control.world_data.locations])
+            elif type == "interview_question":
+                for suspect in control.case_data.keySuspects:
+                    for iq in suspect.interview:
+                        unlock_target.options.append(ft.dropdown.Option(iq.questionId, f"{suspect.characterId}: {iq.question}"))
+            unlock_target.update()
+
+        def add_unlock(e):
+            clue.revealsUnlocks.append({"type": unlock_type.value, "id": unlock_target.value})
+            dialog.open = False
+            control.page.update()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Add Unlock"),
+            content=ft.Column([
+                unlock_type,
+                unlock_target,
+            ]),
+            actions=[
+                ft.TextButton("Add", on_click=add_unlock),
+                ft.TextButton("Cancel", on_click=lambda e: setattr(dialog, 'open', False) or control.page.update()),
+            ]
+        )
+        control.page.dialog = dialog
+        dialog.open = True
+        control.page.update()
 
     def update_clues_view():
         clues_section.controls.clear()
@@ -147,15 +211,70 @@ def build_case_builder_view(control: Control):
                 ),
                 ft.TextField(label="Mechanism of Misdirection", value=clue.mechanismOfMisdirection, on_change=lambda e: control.update_clue(clue, 'mechanismOfMisdirection', e.control.value)),
                 ft.TextField(label="Debunking Clue", value=clue.debunkingClue, on_change=lambda e: control.update_clue(clue, 'debunkingClue', e.control.value)),
-                ft.TextField(label="Dependencies", value=", ".join(clue.dependencies), on_change=lambda e: control.update_clue(clue, 'dependencies', [s.strip() for s in e.control.value.split(',')])),
+                ft.Dropdown(
+                    label="Dependencies",
+                    options=[ft.dropdown.Option(c.clueId, c.clueSummary) for c in control.case_data.clues],
+                    value=clue.dependencies,
+                    multi_select=True,
+                    on_change=lambda e: control.update_clue(clue, 'dependencies', e.control.value)
+                ),
                 ft.TextField(label="Required Actions for Discovery", value=", ".join(clue.requiredActionsForDiscovery), on_change=lambda e: control.update_clue(clue, 'requiredActionsForDiscovery', [s.strip() for s in e.control.value.split(',')])),
                 ft.TextField(label="Associated Item", value=clue.associatedItem, on_change=lambda e: control.update_clue(clue, 'associatedItem', e.control.value)),
                 ft.TextField(label="Associated Location", value=clue.associatedLocation, on_change=lambda e: control.update_clue(clue, 'associatedLocation', e.control.value)),
                 ft.TextField(label="Associated Character", value=clue.associatedCharacter, on_change=lambda e: control.update_clue(clue, 'associatedCharacter', e.control.value)),
+                ft.ElevatedButton(text="Manage Unlocks", on_click=lambda e: open_unlocks_dialog(clue)),
             ])
             clues_section.controls.append(clue_form)
 
     update_clues_view()
+
+    case_locations_section = ft.Column()
+
+    def update_case_locations_view():
+        case_locations_section.controls.clear()
+
+        def on_location_select(e):
+            # Find or create the CaseLocation
+            case_loc = next((cl for cl in control.case_data.caseLocations if cl.locationId == e.control.value), None)
+            if not case_loc:
+                case_loc = schemas.CaseLocation(locationId=e.control.value, locationClues=[], witnesses=[])
+                control.case_data.caseLocations.append(case_loc)
+            control.select_asset(case_loc)
+            update_case_locations_view()
+
+        location_dropdown = ft.Dropdown(
+            label="Select Location",
+            options=[ft.dropdown.Option(loc.id, loc.name) for loc in control.world_data.locations],
+            value=control.selected_asset.locationId if isinstance(control.selected_asset, schemas.CaseLocation) else None,
+            on_change=on_location_select
+        )
+        case_locations_section.controls.append(location_dropdown)
+
+        if isinstance(control.selected_asset, schemas.CaseLocation):
+            case_loc = control.selected_asset
+            
+            clues_checklist = ft.Column([ft.Text("Clues at this Location", style=ft.TextThemeStyle.HEADLINE_SMALL)])
+            for clue in control.case_data.clues:
+                def on_clue_check_change(e, c=clue, cloc=case_loc):
+                    if e.control.value:
+                        cloc.locationClues.append(c.clueId)
+                    else:
+                        cloc.locationClues.remove(c.clueId)
+                clues_checklist.controls.append(ft.Checkbox(label=clue.clueSummary, value=clue.clueId in case_loc.locationClues, on_change=on_clue_check_change))
+            
+            witnesses_checklist = ft.Column([ft.Text("Witnesses at this Location", style=ft.TextThemeStyle.HEADLINE_SMALL)])
+            non_suspects = [char for char in control.world_data.characters if char.id not in [s.characterId for s in control.case_data.keySuspects]]
+            for witness in non_suspects:
+                def on_witness_check_change(e, w=witness, cloc=case_loc):
+                    if e.control.value:
+                        cloc.witnesses.append(schemas.CaseWitness(characterId=w.id, interview=[]))
+                    else:
+                        cloc.witnesses = [wit for wit in cloc.witnesses if wit.characterId != w.id]
+                witnesses_checklist.controls.append(ft.Checkbox(label=witness.fullName, value=any(w.characterId == witness.id for w in case_loc.witnesses), on_change=on_witness_check_change))
+
+            case_locations_section.controls.extend([clues_checklist, witnesses_checklist])
+
+    update_case_locations_view()
 
     return ft.Column(
         [
@@ -168,6 +287,9 @@ def build_case_builder_view(control: Control):
             ft.Divider(),
             ft.Text("Manage Suspects", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
             suspects_section,
+            ft.Divider(),
+            ft.Text("Manage Case Locations", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            case_locations_section,
             ft.Divider(),
             ft.Text("Manage Clues", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
             clues_section,

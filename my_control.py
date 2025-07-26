@@ -28,6 +28,8 @@ class Control:
         """
         if self.world_data and self.case_data:
             data_manager.save_case("The Crimson Stain", self.world_data, self.case_data)
+            self.page.snack_bar = ft.SnackBar(ft.Text("Case data saved successfully!"), open=True)
+            self.page.update()
 
     def select_asset(self, asset: Any):
         """
@@ -144,6 +146,30 @@ class Control:
         self.select_asset(new_clue)
         self.page.update()
 
+    def toggle_interview_question_is_clue(self, question: schemas.InterviewQuestion, is_clue: bool):
+        """
+        Toggles the isClue flag on an interview question and creates/removes a corresponding clue.
+        """
+        question.isClue = is_clue
+        if is_clue:
+            # Create a new clue if one doesn't already exist for this question
+            if not any(c.source == question.questionId for c in self.case_data.clues):
+                new_clue = schemas.Clue(
+                    clueId=f"clue-{question.questionId}",
+                    criticalClue=False,
+                    redHerring=False,
+                    isLie=False,
+                    source=question.questionId,
+                    clueSummary=f"From interview: {question.question}",
+                    knowledgeLevel="Sleuth Only",
+                )
+                self.case_data.clues.append(new_clue)
+        else:
+            # Remove the clue if it exists
+            self.case_data.clues = [c for c in self.case_data.clues if c.source != question.questionId]
+        
+        self.page.update()
+
     def add_interview_question(self, suspect: schemas.CaseSuspect):
         """
         Adds a new, empty interview question to a suspect.
@@ -183,17 +209,22 @@ class Control:
         setattr(self.case_data.caseMeta, attribute_name, new_value)
         self.page.update()
 
-    def update_selected_asset(self, attribute_name: str, new_value: Any):
+    def delete_asset(self):
         """
-        Updates an attribute of the selected asset.
+        Deletes the currently selected asset.
         """
         if self.selected_asset:
-            # Handle type conversion for numeric fields
-            if attribute_name in ['honesty', 'victimLikelihood', 'killerLikelihood', 'age']:
-                try:
-                    new_value = int(new_value)
-                except (ValueError, TypeError):
-                    new_value = 0 # or some other default
-            setattr(self.selected_asset, attribute_name, new_value)
-            self.page.update()
+            asset_type_map = {
+                schemas.Character: self.world_data.characters,
+                schemas.Location: self.world_data.locations,
+                schemas.Item: self.world_data.items,
+                schemas.Faction: self.world_data.factions,
+                schemas.District: self.world_data.districts,
+            }
+            for asset_type, asset_list in asset_type_map.items():
+                if isinstance(self.selected_asset, asset_type):
+                    asset_list.remove(self.selected_asset)
+                    self.selected_asset = None
+                    self.page.update()
+                    return
 
